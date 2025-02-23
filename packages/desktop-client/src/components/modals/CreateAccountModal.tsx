@@ -31,7 +31,9 @@ type CreateAccountProps = {
   upgradingAccountId?: string;
 };
 
-export function CreateAccountModal({ upgradingAccountId }: CreateAccountProps) {
+export function CreateAccountModal({
+  upgradingAccountId,
+}: Readonly<CreateAccountProps>) {
   const { t } = useTranslation();
 
   const syncServerStatus = useSyncServerStatus();
@@ -51,11 +53,7 @@ export function CreateAccountModal({ upgradingAccountId }: CreateAccountProps) {
       return;
     }
 
-    if (upgradingAccountId == null) {
       authorizeBank(dispatch);
-    } else {
-      authorizeBank(dispatch);
-    }
   };
 
   const onConnectSimpleFin = async () => {

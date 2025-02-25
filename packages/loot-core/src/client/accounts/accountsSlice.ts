@@ -138,7 +138,8 @@ export const linkAccountT212 = createAppAsyncThunk(
     upgradingId?: AccountEntity['id'];
   }) => {
     await send('t212-accounts-link', params);
-});
+  },
+);
 
 function handleSyncResponse(
   accountId: AccountEntity['id'],

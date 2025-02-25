@@ -897,6 +897,10 @@ export async function syncAccount(
       newAccount,
     );
   } else if (acctRow.account_sync_source === 't212') {
+    const currTotal = await db.first(
+      'SELECT SUM(amount) / 100 AS Balance FROM transactions WHERE acct = ? AND tombstone = 0',
+      [acctRow.id],
+    );
     const balance = await getT212Balance({ accountId: id });
 
     if (!balance) {
@@ -904,11 +908,9 @@ export async function syncAccount(
     }
 
     download = {
-      accountBalance: balance * 100,
-      startingBalance: balance * 100,
       transactions: [
         {
-          amount: balance - acctRow.balance_current / 10000,
+          amount: balance - currTotal.Balance,
           date: new Date(),
           payeeName: 'Market Prices',
         },

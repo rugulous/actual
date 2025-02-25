@@ -69,7 +69,7 @@ app.get('/:name', async (req, res) => {
 app.delete('/:name', canModifySecrets(), async (req, res) => {
   const success = secretsService.delete(req.params.name);
   if(success){
-    res.sendStatus(204);
+    res.status(200).send({status: 'ok'});
   } else {
     res.status(500).send(`failed to delete ${req.params.name}`)
   }

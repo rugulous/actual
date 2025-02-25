@@ -25,7 +25,6 @@ app.post("/t212-balance", async (req, res) => {
     const response = await fetch("https://live.trading212.com/api/v0/equity/account/cash", {headers: {authorization}});
 
     if(!response.ok){
-        console.log(response.status);
         return res.status(response.status).send();
     }
 

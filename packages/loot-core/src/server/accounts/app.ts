@@ -26,7 +26,7 @@ import {
 } from '../errors';
 import { app as mainApp } from '../main-app';
 import { mutator } from '../mutators';
-import { get, post } from '../post';
+import { del, get, post } from '../post';
 import { getServer } from '../server-config';
 import { batchMessages } from '../sync';
 import { undoable, withUndo } from '../undo';
@@ -429,6 +429,32 @@ async function checkSecret(name: string) {
         'X-ACTUAL-TOKEN': userToken,
       },
     });
+  } catch (error) {
+    console.error(error);
+    return { error: 'failed' };
+  }
+}
+
+async function deleteSecret(name: string) {
+  const userToken = await asyncStorage.getItem('user-token');
+
+  if (!userToken) {
+    return { error: 'unauthorized' };
+  }
+
+  const serverConfig = getServer();
+  if (!serverConfig) {
+    throw new Error('Failed to get server config.');
+  }
+
+  try {
+    return await del(
+      serverConfig.BASE_SERVER + '/secret/' + name,
+      {},
+      {
+        'X-ACTUAL-TOKEN': userToken,
+      },
+    );
   } catch (error) {
     console.error(error);
     return { error: 'failed' };
@@ -971,6 +997,11 @@ async function unlinkAccount({ id }: { id: AccountEntity['id'] }) {
     balance_limit: null,
     account_sync_source: null,
   });
+
+  if (accRow.account_sync_source === 't212') {
+    //we also need to clear the T212 secret!
+    await deleteSecret(id);
+  }
 
   if (isGoCardless === false) {
     return;

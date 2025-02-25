@@ -25,7 +25,13 @@ app.post("/t212-balance", async (req, res) => {
     const response = await fetch("https://live.trading212.com/api/v0/equity/account/cash", {headers: {authorization}});
 
     if(!response.ok){
-        return res.status(response.status).send();
+        let error = "An unknown error occurred. Please try again.";
+        if(response.status === 401){
+            error = "Invalid API key"
+        } else if(response.status === 429){
+            error = "Too many requests. Slow down!";
+        }
+        return res.status(response.status).send(error);
     }
 
     const json = await response.json();

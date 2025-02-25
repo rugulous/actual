@@ -903,10 +903,6 @@ export async function syncAccount(
     );
     const balance = await getT212Balance({ accountId: id });
 
-    if (!balance) {
-      throw new Error('Failed to sync');
-    }
-
     download = {
       transactions: [
         {
@@ -998,6 +994,6 @@ export async function getT212Balance({
     return json.total;
   } catch (error) {
     console.error(error);
-    return null;
+    return error.message;
   }
 }

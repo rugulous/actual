@@ -45,6 +45,7 @@ import { GoCardlessInitialiseModal } from './modals/GoCardlessInitialiseModal';
 import { HoldBufferModal } from './modals/HoldBufferModal';
 import { ImportTransactionsModal } from './modals/ImportTransactionsModal';
 import { KeyboardShortcutModal } from './modals/KeyboardShortcutModal';
+import { LinkTrading212Modal } from './modals/LinkTrading212Modal';
 import { LoadBackupModal } from './modals/LoadBackupModal';
 import { ConfirmChangeDocumentDirModal } from './modals/manager/ConfirmChangeDocumentDir';
 import { DeleteFileModal } from './modals/manager/DeleteFileModal';
@@ -671,6 +672,9 @@ export function Modals() {
 
         case 'enable-password-auth':
           return <PasswordEnableModal key={name} onSave={options.onSave} />;
+
+        case 'link-trading-212':
+          return <LinkTrading212Modal key={name} />;
 
         default:
           throw new Error('Unknown modal');

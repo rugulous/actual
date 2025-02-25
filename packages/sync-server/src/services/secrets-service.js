@@ -48,6 +48,15 @@ class SecretsDb {
     ]);
     return result;
   }
+
+  delete(name){
+    if (!this.db) {
+      this.db = this.open();
+    }
+
+    this.debug(`deleting secret '${name}'`);
+    this.db.mutate("DELETE FROM secrets WHERE name = ?", [name]);
+  }
 }
 
 const secretsDb = new SecretsDb();
@@ -87,5 +96,24 @@ export const secretsService = {
    */
   exists: name => {
     return Boolean(secretsService.get(name));
+  },
+
+  /**
+   * Removes a secret by name.
+   * @param {SecretName} name - The name of the secret to retrieve.
+   * @returns {boolean} True if the secret no longer exists, false otherwise
+   */
+  delete: name => {
+    if(!secretsService.exists(name)){
+      return true;
+    }
+
+    try{
+      secretsDb.delete(name);
+      return true;
+    } catch (error) {
+      console.error(error);
+      return false;
+    }
   },
 };

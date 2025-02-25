@@ -13,6 +13,7 @@ import * as openidApp from './app-openid.js';
 import * as secretApp from './app-secrets.js';
 import * as simpleFinApp from './app-simplefin/app-simplefin.js';
 import * as syncApp from './app-sync.js';
+import * as externalApp from "./app-external.js";
 import { config } from './load-config.js';
 
 const app = express();
@@ -54,6 +55,7 @@ app.use('/account', accountApp.handlers);
 app.use('/gocardless', goCardlessApp.handlers);
 app.use('/simplefin', simpleFinApp.handlers);
 app.use('/secret', secretApp.handlers);
+app.use('/external', externalApp.handlers);
 
 app.use('/admin', adminApp.handlers);
 app.use('/openid', openidApp.handlers);

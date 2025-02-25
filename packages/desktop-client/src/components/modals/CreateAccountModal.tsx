@@ -53,7 +53,7 @@ export function CreateAccountModal({
       return;
     }
 
-      authorizeBank(dispatch);
+    authorizeBank(dispatch);
   };
 
   const onConnectSimpleFin = async () => {
@@ -163,6 +163,8 @@ export function CreateAccountModal({
   const onCreateLocalAccount = () => {
     dispatch(pushModal('add-local-account'));
   };
+
+  const onLinkTrading212 = () => dispatch(pushModal('link-trading-212'));
 
   const { configuredGoCardless } = useGoCardlessStatus();
   useEffect(() => {
@@ -359,6 +361,38 @@ export function CreateAccountModal({
                         <Trans>
                           SimpleFIN provides reliable, up-to-date information
                           from hundreds of banks.
+                        </Trans>
+                      </Text>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          gap: 10,
+                          marginTop: '18px',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Button
+                          isDisabled={syncServerStatus !== 'online'}
+                          style={{
+                            padding: '10px 0',
+                            fontSize: 15,
+                            fontWeight: 600,
+                            flex: 1,
+                          }}
+                          onPress={onLinkTrading212}
+                        >
+                          {t('Connect to Trading 212')}
+                        </Button>
+                      </View>
+                      <Text style={{ lineHeight: '1.4em', fontSize: 15 }}>
+                        <Trans>
+                          <strong>Link a Trading 212 investment account</strong>{' '}
+                          to automatically track the balance of your
+                          investments.
+                        </Trans>
+                        <Trans>
+                          Actual will only read account balances and will not
+                          execute market orders.
                         </Trans>
                       </Text>
                     </>

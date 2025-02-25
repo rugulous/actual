@@ -348,6 +348,7 @@ type FinanceModals = {
   'keyboard-shortcuts': EmptyObject;
   'goal-templates': EmptyObject;
   'category-automations-edit': EmptyObject;
+  'link-trading-212': EmptyObject;
 };
 
 export type PushModalAction = {

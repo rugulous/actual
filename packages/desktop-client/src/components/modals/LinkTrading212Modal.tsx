@@ -68,7 +68,8 @@ export function LinkTrading212Modal() {
             {
               account_id: crypto.randomUUID(),
               name: 'Trading 212 Account',
-              balance: balance / 100,
+              balance,
+              offbudget: true,
             },
           ],
           requisitionId: apiKey,

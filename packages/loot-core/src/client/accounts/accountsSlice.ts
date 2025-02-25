@@ -130,6 +130,16 @@ export const linkAccountSimpleFin = createAppAsyncThunk(
   },
 );
 
+export const linkAccountT212 = createAppAsyncThunk(
+  `${sliceName}/linkAccountT212`,
+  async (params: {
+    requisitionId: string;
+    account: { account_id: string; name: string };
+    upgradingId?: AccountEntity['id'];
+  }) => {
+    await send('t212-accounts-link', params);
+});
+
 function handleSyncResponse(
   accountId: AccountEntity['id'],
   res: SyncResponseWithErrors,

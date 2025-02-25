@@ -59,6 +59,8 @@ export type AccountHandlers = {
   'simplefin-batch-sync': typeof simpleFinBatchSync;
   'transactions-import': typeof importTransactions;
   'account-unlink': typeof unlinkAccount;
+  'get-t212-balance': typeof bankSync.getT212Balance;
+  't212-accounts-link': typeof linkT212Account;
 };
 
 async function updateAccount({ id, name }: Pick<AccountEntity, 'id' | 'name'>) {
@@ -423,7 +425,9 @@ async function checkSecret(name: string) {
 
   try {
     return await get(serverConfig.BASE_SERVER + '/secret/' + name, {
-      'X-ACTUAL-TOKEN': userToken,
+      headers: {
+        'X-ACTUAL-TOKEN': userToken,
+      },
     });
   } catch (error) {
     console.error(error);
@@ -1011,6 +1015,65 @@ async function unlinkAccount({ id }: { id: AccountEntity['id'] }) {
   return 'ok';
 }
 
+async function linkT212Account({
+  requisitionId: apiKey,
+  account,
+  upgradingId,
+}: {
+  requisitionId: string;
+  account: { account_id: string; name: string };
+  upgradingId?: AccountEntity['id'];
+}) {
+  let id;
+
+  const bank = await link.findOrCreateBank(
+    { name: 'Trading 212' },
+    '292a39aa-e6bf-4d4f-8dcc-398335aea696',
+  );
+
+  if (upgradingId) {
+    id = upgradingId;
+    await db.update('accounts', {
+      id,
+      account_id: account.account_id,
+      account_sync_source: 't212',
+      bank: bank.id,
+    });
+  } else {
+    id = uuidv4();
+    await db.insertWithUUID('accounts', {
+      id,
+      account_id: account.account_id,
+      name: account.name,
+      official_name: 'integration-TRADING_212',
+      offbudget: 1,
+      account_sync_source: 't212',
+      bank: bank.id,
+    });
+    await db.insertPayee({
+      name: '',
+      transfer_acct: id,
+    });
+  }
+
+  await setSecret({ name: id, value: apiKey });
+
+  await bankSync.syncAccount(
+    undefined,
+    undefined,
+    id,
+    account.account_id,
+    undefined,
+  );
+
+  connection.send('sync-event', {
+    type: 'success',
+    tables: ['transactions'],
+  });
+
+  return 'ok';
+}
+
 export const app = createApp<AccountHandlers>();
 
 app.method('account-update', mutator(undoable(updateAccount)));
@@ -1036,3 +1099,5 @@ app.method('accounts-bank-sync', accountsBankSync);
 app.method('simplefin-batch-sync', simpleFinBatchSync);
 app.method('transactions-import', mutator(undoable(importTransactions)));
 app.method('account-unlink', mutator(unlinkAccount));
+app.method('get-t212-balance', bankSync.getT212Balance);
+app.method('t212-accounts-link', linkT212Account);

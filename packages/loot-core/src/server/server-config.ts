@@ -6,6 +6,7 @@ type ServerConfig = {
   SIGNUP_SERVER: string;
   GOCARDLESS_SERVER: string;
   SIMPLEFIN_SERVER: string;
+  EXTERNAL_SERVER: string;
 };
 
 let config: ServerConfig | null = null;
@@ -42,6 +43,7 @@ export function getServer(url?: string): ServerConfig | null {
         SIGNUP_SERVER: joinURL(url, '/account'),
         GOCARDLESS_SERVER: joinURL(url, '/gocardless'),
         SIMPLEFIN_SERVER: joinURL(url, '/simplefin'),
+        EXTERNAL_SERVER: joinURL(url, '/external'),
       };
     } catch (error) {
       console.warn(

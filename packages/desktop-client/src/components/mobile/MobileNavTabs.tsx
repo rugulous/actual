@@ -13,12 +13,15 @@ import { styles } from '@actual-app/components/styles';
 import { View } from '@actual-app/components/view';
 import { useDrag } from '@use-gesture/react';
 
+import { useSyncedPref } from '../../hooks/useSyncedPref';
 import {
   SvgAdd,
   SvgCog,
   SvgPiggyBank,
   SvgStoreFront,
   SvgTuning,
+  SvgViewHide,
+  SvgViewShow,
   SvgWallet,
 } from '../../icons/v1';
 import { SvgReports } from '../../icons/v1/Reports';
@@ -90,6 +93,13 @@ export function MobileNavTabs() {
     [api, HIDDEN_Y],
   );
 
+  const [isPrivacyEnabledPref, setPrivacyEnabledPref] =
+    useSyncedPref('isPrivacyEnabled');
+  let isPrivacyEnabled = String(isPrivacyEnabledPref) === 'true';
+
+  const getPrivacyIcon = (isEnabled: boolean) =>
+    isEnabled ? SvgViewHide : SvgViewShow;
+
   const navTabs = [
     {
       name: t('Budget'),
@@ -139,8 +149,28 @@ export function MobileNavTabs() {
       style: navTabStyle,
       Icon: SvgCog,
     },
+    {
+      name: t('Privacy Mode'),
+      style: navTabStyle,
+      Icon: getPrivacyIcon(isPrivacyEnabled),
+      action: function () {
+        isPrivacyEnabled = !isPrivacyEnabled;
+        setPrivacyEnabledPref(String(isPrivacyEnabled));
+        this.Icon = getPrivacyIcon(isPrivacyEnabled);
+      },
+    },
   ].map(tab => (
-    <NavTab key={tab.path} onClick={() => openDefault()} {...tab} />
+    <NavTab
+      key={tab.name}
+      onClick={() => {
+        if (tab.action) {
+          tab.action();
+        }
+
+        openDefault();
+      }}
+      {...tab}
+    />
   ));
 
   const bufferTabsCount = COLUMN_COUNT - (navTabs.length % COLUMN_COUNT);
@@ -247,7 +277,7 @@ type NavTabIconProps = {
 
 type NavTabProps = {
   name: string;
-  path: string;
+  path?: string;
   Icon: ComponentType<NavTabIconProps>;
   style?: CSSProperties;
   onClick: ComponentProps<typeof NavLink>['onClick'];
@@ -260,7 +290,8 @@ function NavTab({ Icon: TabIcon, name, path, style, onClick }: NavTabProps) {
       style={({ isActive }) => ({
         ...styles.noTapHighlight,
         alignItems: 'center',
-        color: isActive ? theme.mobileNavItemSelected : theme.mobileNavItem,
+        color:
+          isActive && path ? theme.mobileNavItemSelected : theme.mobileNavItem,
         display: 'flex',
         flexDirection: 'column',
         textDecoration: 'none',

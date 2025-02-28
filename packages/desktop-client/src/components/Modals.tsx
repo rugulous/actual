@@ -571,6 +571,7 @@ export function Modals() {
               onAddCategoryGroup={options.onAddCategoryGroup}
               onToggleHiddenCategories={options.onToggleHiddenCategories}
               onSwitchBudgetFile={options.onSwitchBudgetFile}
+              onTogglePrivacyMode={options.onTogglePrivacyMode}
             />
           );
 

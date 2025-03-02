@@ -903,14 +903,21 @@ export async function syncAccount(
     );
     const balance = await getT212Balance({ accountId: id });
 
+    //only add a new transaction if the balance has changed
+    const transactions =
+      balance - currTotal.Balance !== 0
+        ? [
+            {
+              amount: balance - currTotal.Balance,
+              date: new Date(),
+              payeeName: 'Market Prices',
+              cleared: true,
+            },
+          ]
+        : [];
+
     download = {
-      transactions: [
-        {
-          amount: balance - currTotal.Balance,
-          date: new Date(),
-          payeeName: 'Market Prices',
-        },
-      ],
+      transactions,
     };
   } else {
     throw new Error(

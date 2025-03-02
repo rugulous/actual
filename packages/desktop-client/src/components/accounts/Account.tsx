@@ -45,7 +45,6 @@ import {
   type PagedQuery,
 } from 'loot-core/client/query-helpers';
 import { type AppDispatch } from 'loot-core/client/store';
-import { validForTransfer } from 'loot-core/client/transfer';
 import { send, listen } from 'loot-core/platform/client/fetch';
 import * as undo from 'loot-core/platform/client/undo';
 import { type UndoState } from 'loot-core/server/undo';
@@ -308,6 +307,7 @@ type AccountInternalProps = {
   hideFraction: boolean;
   accountsSyncing: string[];
   dispatch: AppDispatch;
+  onSetTransfer: ReturnType<typeof useTransactionBatchActions>['onSetTransfer'];
 };
 type AccountInternalState = {
   search: string;
@@ -1336,49 +1336,11 @@ class AccountInternal extends PureComponent<
   };
 
   onSetTransfer = async (ids: string[]) => {
-    const onConfirmTransfer = async (ids: string[]) => {
-      this.setState({ workingHard: true });
-
-      const payees = this.props.payees;
-
-      const { data: transactions } = await runQuery(
-        q('transactions')
-          .filter({ id: { $oneof: ids } })
-          .select('*'),
-      );
-      const [fromTrans, toTrans] = transactions;
-
-      if (transactions.length === 2 && validForTransfer(fromTrans, toTrans)) {
-        const fromPayee = payees.find(
-          p => p.transfer_acct === fromTrans.account,
-        );
-        const toPayee = payees.find(p => p.transfer_acct === toTrans.account);
-
-        const changes = {
-          updated: [
-            {
-              ...fromTrans,
-              payee: toPayee?.id,
-              transfer_id: toTrans.id,
-            },
-            {
-              ...toTrans,
-              payee: fromPayee?.id,
-              transfer_id: fromTrans.id,
-            },
-          ],
-        };
-
-        await send('transactions-batch-update', changes);
-      }
-
-      await this.refetchTransactions();
-    };
-
-    await this.checkForReconciledTransactions(
+    this.setState({ workingHard: true });
+    await this.props.onSetTransfer(
       ids,
-      'batchEditWithReconciled',
-      onConfirmTransfer,
+      this.props.payees,
+      this.refetchTransactions,
     );
   };
 
@@ -1923,6 +1885,7 @@ type AccountHackProps = Omit<
   | 'onBatchLinkSchedule'
   | 'onBatchUnlinkSchedule'
   | 'onBatchDelete'
+  | 'onSetTransfer'
 >;
 
 function AccountHack(props: AccountHackProps) {
@@ -1934,6 +1897,7 @@ function AccountHack(props: AccountHackProps) {
     onBatchLinkSchedule,
     onBatchUnlinkSchedule,
     onBatchDelete,
+    onSetTransfer,
   } = useTransactionBatchActions();
 
   return (
@@ -1945,6 +1909,7 @@ function AccountHack(props: AccountHackProps) {
       onBatchLinkSchedule={onBatchLinkSchedule}
       onBatchUnlinkSchedule={onBatchUnlinkSchedule}
       onBatchDelete={onBatchDelete}
+      onSetTransfer={onSetTransfer}
       {...props}
     />
   );

@@ -897,28 +897,8 @@ export async function syncAccount(
       newAccount,
     );
   } else if (acctRow.account_sync_source === 't212') {
-    const currTotal = await db.first<{ Balance: number }>(
-      'SELECT SUM(amount) / 100 AS Balance FROM transactions WHERE acct = ? AND tombstone = 0',
-      [acctRow.id],
-    );
     const balance = await getT212Balance({ accountId: id });
-
-    //only add a new transaction if the balance has changed
-    const transactions =
-      balance - currTotal.Balance !== 0
-        ? [
-            {
-              amount: balance - currTotal.Balance,
-              date: new Date(),
-              payeeName: 'Market Prices',
-              cleared: true,
-            },
-          ]
-        : [];
-
-    download = {
-      transactions,
-    };
+    download = await createInvestmentAdjustmentTransaction(acctRow.id, balance);
   } else {
     throw new Error(
       `Unrecognized bank-sync provider: ${acctRow.account_sync_source}`,
@@ -1003,4 +983,62 @@ export async function getT212Balance({
     console.error(error);
     return error.message;
   }
+}
+export async function syncInvestments(
+  userId: string,
+  userKey: string,
+  accountId: string,
+  investmentTypes: (
+    | { type: 'cash'; value: number }
+    | {
+        type: 'crypto' | 'investment';
+        tickers: { ticker: string; quantity: number }[];
+      }
+  )[],
+) {
+  let balance = 0;
+
+  for (const investment of investmentTypes) {
+    if (investment.type === 'cash') {
+      balance += investment.value;
+      continue;
+    }
+
+    const json = await post(
+      getServer().EXTERNAL_SERVER + '/' + investment.type,
+      investment.tickers,
+      {
+        'X-ACTUAL-TOKEN': await asyncStorage.getItem('user-token'),
+      },
+    );
+  }
+
+  return await createInvestmentAdjustmentTransaction(accountId, balance);
+}
+
+async function createInvestmentAdjustmentTransaction(
+  accountId: string,
+  balance: number,
+) {
+  const currTotal = await db.first<{ Balance: number }>(
+    'SELECT SUM(amount) / 100 AS Balance FROM transactions WHERE acct = ? AND tombstone = 0',
+    [accountId],
+  );
+
+  //only add a new transaction if the balance has changed
+  const transactions =
+    balance - currTotal.Balance !== 0
+      ? [
+          {
+            amount: balance - currTotal.Balance,
+            date: new Date(),
+            payeeName: 'Market Prices',
+            cleared: true,
+          },
+        ]
+      : [];
+
+  return {
+    transactions,
+  };
 }

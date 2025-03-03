@@ -897,7 +897,7 @@ export async function syncAccount(
       newAccount,
     );
   } else if (acctRow.account_sync_source === 't212') {
-    const currTotal = await db.first(
+    const currTotal = await db.first<{ Balance: number }>(
       'SELECT SUM(amount) / 100 AS Balance FROM transactions WHERE acct = ? AND tombstone = 0',
       [acctRow.id],
     );

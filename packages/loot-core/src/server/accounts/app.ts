@@ -61,6 +61,9 @@ export type AccountHandlers = {
   't212-accounts-link': typeof linkT212Account;
 };
 
+const investmentRegex =
+  /#(\bcrypto\b|\binvestment\b)\s*\{([\s\S]*?)\}|#\bcash\b (\d*\.?\d*)/gm;
+
 async function updateAccount({ id, name }: Pick<AccountEntity, 'id' | 'name'>) {
   await db.update('accounts', { id, name });
   return {};
@@ -768,12 +771,13 @@ async function accountsBankSync({
   ]);
 
   const accounts = await db.runQuery<
-    db.DbAccount & { bankId: db.DbBank['bank_id'] }
+    db.DbAccount & { bankId: db.DbBank['bank_id']; note: string | null }
   >(
     `
-    SELECT a.*, b.bank_id as bankId
+    SELECT a.*, b.bank_id as bankId, n.note
     FROM accounts a
     LEFT JOIN banks b ON a.bank = b.id
+    LEFT OUTER JOIN notes n ON n.ID = 'account-' || a.id
     WHERE a.tombstone = 0 AND a.closed = 0
       ${ids.length ? `AND a.id IN (${ids.map(() => '?').join(', ')})` : ''}
     ORDER BY a.offbudget, a.sort_order
@@ -788,22 +792,17 @@ async function accountsBankSync({
   const updatedAccounts: Array<AccountEntity['id']> = [];
 
   for (const acct of accounts) {
+    let syncResponse = null;
     if (acct.bankId && acct.account_id) {
       try {
         console.group('Bank Sync operation for account:', acct.name);
-        const syncResponse = await bankSync.syncAccount(
+        syncResponse = await bankSync.syncAccount(
           userId as string,
           userKey as string,
           acct.id,
           acct.account_id,
           acct.bankId,
         );
-
-        const syncResponseData = await handleSyncResponse(syncResponse, acct);
-
-        newTransactions.push(...syncResponseData.newTransactions);
-        matchedTransactions.push(...syncResponseData.matchedTransactions);
-        updatedAccounts.push(...syncResponseData.updatedAccounts);
       } catch (err) {
         const error = err as Error;
         errors.push(handleSyncError(error, acct));
@@ -814,6 +813,67 @@ async function accountsBankSync({
       } finally {
         console.groupEnd();
       }
+    } else if (acct.note) {
+      const matches = [...acct.note.matchAll(investmentRegex)];
+      if (matches.length === 0) {
+        continue;
+      }
+
+      try {
+        console.group(
+          'Investment Valuation Sync operation for account:',
+          acct.name,
+        );
+        const investmentTypes = matches.map(match => {
+          const type = (match[1] ?? 'cash') as 'cash' | 'crypto' | 'investment';
+          if (type === 'cash') {
+            const value = parseFloat(match[3]);
+            console.log(`Found cash value of ${value}`);
+            return {
+              type,
+              value,
+            };
+          }
+
+          const tickers = match[2]
+            .trim()
+            .split('\n')
+            .map(pair => {
+              const parts = pair.split(':');
+              return {
+                ticker: parts[0].trim(),
+                quantity: parseFloat(parts[1].trim()),
+              };
+            });
+
+          console.log(
+            `Found ${type} with values: ${tickers.map(t => t.ticker + ' (' + t.quantity + ')').join(', ')}`,
+          );
+
+          return {
+            type,
+            tickers,
+          };
+        });
+
+        syncResponse = await bankSync.syncInvestments(acct.id, investmentTypes);
+      } catch (err) {
+        const error = err as Error;
+        errors.push(handleSyncError(error, acct));
+        captureException({
+          ...error,
+          message: 'Failed updating valuation for account “' + acct.name + '.”',
+        } as Error);
+      } finally {
+        console.groupEnd();
+      }
+    }
+
+    if (syncResponse) {
+      const syncResponseData = await handleSyncResponse(syncResponse, acct);
+      newTransactions.push(...syncResponseData.newTransactions);
+      matchedTransactions.push(...syncResponseData.matchedTransactions);
+      updatedAccounts.push(...syncResponseData.updatedAccounts);
     }
   }
 

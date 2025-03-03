@@ -984,37 +984,6 @@ export async function getT212Balance({
     return error.message;
   }
 }
-export async function syncInvestments(
-  userId: string,
-  userKey: string,
-  accountId: string,
-  investmentTypes: (
-    | { type: 'cash'; value: number }
-    | {
-        type: 'crypto' | 'investment';
-        tickers: { ticker: string; quantity: number }[];
-      }
-  )[],
-) {
-  let balance = 0;
-
-  for (const investment of investmentTypes) {
-    if (investment.type === 'cash') {
-      balance += investment.value;
-      continue;
-    }
-
-    const json = await post(
-      getServer().EXTERNAL_SERVER + '/' + investment.type,
-      investment.tickers,
-      {
-        'X-ACTUAL-TOKEN': await asyncStorage.getItem('user-token'),
-      },
-    );
-  }
-
-  return await createInvestmentAdjustmentTransaction(accountId, balance);
-}
 
 async function createInvestmentAdjustmentTransaction(
   accountId: string,
@@ -1041,4 +1010,43 @@ async function createInvestmentAdjustmentTransaction(
   return {
     transactions,
   };
+}
+
+export async function syncInvestments(
+  accountId: string,
+  investmentTypes: (
+    | { type: 'cash'; value: number }
+    | {
+        type: 'crypto' | 'investment';
+        tickers: { ticker: string; quantity: number }[];
+      }
+  )[],
+) {
+  let balance = 0;
+
+  for (const investment of investmentTypes) {
+    if (investment.type === 'cash') {
+      balance += investment.value;
+      continue;
+    }
+
+    const json = await post(
+      getServer().EXTERNAL_SERVER + '/' + investment.type,
+      investment.tickers,
+      {
+        'X-ACTUAL-TOKEN': await asyncStorage.getItem('user-token'),
+      },
+    );
+
+    for (const key of Object.keys(json)) {
+      balance += json[key];
+    }
+  }
+
+  const acctRow = await db.select('accounts', accountId);
+  const download = await createInvestmentAdjustmentTransaction(
+    accountId,
+    balance,
+  );
+  return processBankSyncDownload(download, accountId, acctRow, false); //investments are tracked via notes on an account, therefore cannot be new!
 }

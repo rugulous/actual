@@ -201,10 +201,14 @@ export function AccountHeader({
   const isServerOffline = syncServerStatus === 'offline';
   const [_, setExpandSplitsPref] = useLocalPref('expand-splits');
 
-  let canSync = !!(account?.account_id && isUsingServer);
-  if (!account) {
-    // All accounts - check for any syncable account
-    canSync = !!accounts.find(account => !!account.account_id) && isUsingServer;
+  let canSync = false;
+  if (isUsingServer) {
+    if (!account) {
+      // All accounts - check for any syncable account
+      canSync = accounts.some(acct => acct.can_sync);
+    } else {
+      canSync = account.can_sync;
+    }
   }
 
   // Only show the ability to make linked transfers on multi-account views.

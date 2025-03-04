@@ -663,8 +663,19 @@ export async function getPayeeByName(name: DbPayee['name']) {
 
 export function getAccounts() {
   return all(
-    `SELECT a.*, b.name as bankName, b.id as bankId FROM accounts a
+    `SELECT a.*
+        , b.name as bankName
+        , b.id as bankId
+        , CASE WHEN a.account_id IS NOT NULL 
+            OR n.note LIKE '%#crypto%' 
+            OR n.note LIKE '%#gilt%' 
+            OR n.note LIKE '%#investment%' 
+              THEN 1 
+              ELSE 0 
+          END as can_sync
+       FROM accounts a
        LEFT JOIN banks b ON a.bank = b.id
+       LEFT OUTER JOIN notes n ON n.ID = 'account-' || a.id
        WHERE a.tombstone = 0
        ORDER BY sort_order, name`,
   );

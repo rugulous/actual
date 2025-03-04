@@ -4,6 +4,7 @@ import {
     validateSessionMiddleware,
   } from './util/middlewares.js';
 import { secretsService } from './services/secrets-service.js';
+import yahooFinance from 'yahoo-finance2';
 
 const app = express();
 app.use(requestLoggerMiddleware);
@@ -57,6 +58,36 @@ app.post("/crypto", async (req, res) => {
         retVal[req.body[i].ticker] = req.body[i].quantity * parseFloat(values.c[0]);
     })
 
+    res.send({
+        status: 'ok',
+        data: retVal
+    });
+});
+
+app.post("/investment", async (req, res) => {
+    const stocks = await yahooFinance.quote(req.body.map(holding => holding.ticker));
+    const rates = {};
+
+    if(stocks.length != req.body.length){
+        return res.status(500).send('One or more ticker symbols could not be found');
+    }
+
+    const retVal = {};
+    for(let i = 0; i < stocks.length; i++){
+        let value = (stocks[i].regularMarketPrice * 100) * req.body[i].quantity;
+
+        if(stocks[i].currency != "GBP"){
+            if(!rates.hasOwnProperty(stocks[i].currency)){
+                const quote = await yahooFinance.quote(`GBP${stocks[i].currency}=X`);
+                rates[stocks[i].currency] = quote.regularMarketPrice;
+            }
+
+            value /= rates[stocks[i].currency];
+        }
+
+        retVal[stocks[i].symbol] = Math.round(value) / 100;
+    }
+    
     res.send({
         status: 'ok',
         data: retVal

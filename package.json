@@ -84,5 +84,8 @@
   "browserslist": [
     "electron 24.0",
     "defaults"
-  ]
+  ],
+  "dependencies": {
+    "yahoo-finance2": "2.13.3"
+  }
 }

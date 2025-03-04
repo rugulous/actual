@@ -26,7 +26,7 @@ import {
 } from '../errors';
 import { app as mainApp } from '../main-app';
 import { mutator } from '../mutators';
-import { get, post } from '../post';
+import { del, get, post } from '../post';
 import { getServer } from '../server-config';
 import { batchMessages } from '../sync';
 import { undoable, withUndo } from '../undo';
@@ -62,7 +62,12 @@ export type AccountHandlers = {
   'simplefin-batch-sync': typeof simpleFinBatchSync;
   'transactions-import': typeof importTransactions;
   'account-unlink': typeof unlinkAccount;
+  'get-t212-balance': typeof bankSync.getT212Balance;
+  't212-accounts-link': typeof linkT212Account;
 };
+
+const investmentRegex =
+  /#(\bcrypto\b|\binvestment\b|\bgilt\b)\s*\{([\s\S]*?)\}|#\bcash\b (\d*\.?\d*)/gm;
 
 async function updateAccount({
   id,
@@ -528,8 +533,36 @@ async function checkSecret(name: string) {
 
   try {
     return await get(serverConfig.BASE_SERVER + '/secret/' + name, {
-      'X-ACTUAL-TOKEN': userToken,
+      headers: {
+        'X-ACTUAL-TOKEN': userToken,
+      },
     });
+  } catch (error) {
+    console.error(error);
+    return { error: 'failed' };
+  }
+}
+
+async function deleteSecret(name: string) {
+  const userToken = await asyncStorage.getItem('user-token');
+
+  if (!userToken) {
+    return { error: 'unauthorized' };
+  }
+
+  const serverConfig = getServer();
+  if (!serverConfig) {
+    throw new Error('Failed to get server config.');
+  }
+
+  try {
+    return await del(
+      serverConfig.BASE_SERVER + '/secret/' + name,
+      {},
+      {
+        'X-ACTUAL-TOKEN': userToken,
+      },
+    );
   } catch (error) {
     console.error(error);
     return { error: 'failed' };
@@ -873,12 +906,13 @@ async function accountsBankSync({
   ]);
 
   const accounts = await db.runQuery<
-    db.DbAccount & { bankId: db.DbBank['bank_id'] }
+    db.DbAccount & { bankId: db.DbBank['bank_id']; note: string | null }
   >(
     `
-    SELECT a.*, b.bank_id as bankId
+    SELECT a.*, b.bank_id as bankId, n.note
     FROM accounts a
     LEFT JOIN banks b ON a.bank = b.id
+    LEFT OUTER JOIN notes n ON n.ID = 'account-' || a.id
     WHERE a.tombstone = 0 AND a.closed = 0
       ${ids.length ? `AND a.id IN (${ids.map(() => '?').join(', ')})` : ''}
     ORDER BY a.offbudget, a.sort_order
@@ -893,22 +927,17 @@ async function accountsBankSync({
   const updatedAccounts: Array<AccountEntity['id']> = [];
 
   for (const acct of accounts) {
+    let syncResponse = null;
     if (acct.bankId && acct.account_id) {
       try {
         console.group('Bank Sync operation for account:', acct.name);
-        const syncResponse = await bankSync.syncAccount(
+        syncResponse = await bankSync.syncAccount(
           userId as string,
           userKey as string,
           acct.id,
           acct.account_id,
           acct.bankId,
         );
-
-        const syncResponseData = await handleSyncResponse(syncResponse, acct);
-
-        newTransactions.push(...syncResponseData.newTransactions);
-        matchedTransactions.push(...syncResponseData.matchedTransactions);
-        updatedAccounts.push(...syncResponseData.updatedAccounts);
       } catch (err) {
         const error = err as Error;
         errors.push(handleSyncError(error, acct));
@@ -919,6 +948,67 @@ async function accountsBankSync({
       } finally {
         console.groupEnd();
       }
+    } else if (acct.note) {
+      const matches = [...acct.note.matchAll(investmentRegex)];
+      if (matches.length === 0) {
+        continue;
+      }
+
+      try {
+        console.group(
+          'Investment Valuation Sync operation for account:',
+          acct.name,
+        );
+        const investmentTypes = matches.map(match => {
+          const type = (match[1] ?? 'cash') as 'cash' | 'crypto' | 'investment';
+          if (type === 'cash') {
+            const value = parseFloat(match[3]);
+            console.log(`Found cash value of ${value}`);
+            return {
+              type,
+              value,
+            };
+          }
+
+          const tickers = match[2]
+            .trim()
+            .split('\n')
+            .map(pair => {
+              const parts = pair.split(':');
+              return {
+                ticker: parts[0].trim(),
+                quantity: parseFloat(parts[1].trim()),
+              };
+            });
+
+          console.log(
+            `Found ${type} with values: ${tickers.map(t => t.ticker + ' (' + t.quantity + ')').join(', ')}`,
+          );
+
+          return {
+            type,
+            tickers,
+          };
+        });
+
+        syncResponse = await bankSync.syncInvestments(acct.id, investmentTypes);
+      } catch (err) {
+        const error = err as Error;
+        errors.push(handleSyncError(error, acct));
+        captureException({
+          ...error,
+          message: 'Failed updating valuation for account “' + acct.name + '.”',
+        } as Error);
+      } finally {
+        console.groupEnd();
+      }
+    }
+
+    if (syncResponse) {
+      const syncResponseData = await handleSyncResponse(syncResponse, acct);
+      newTransactions.push(...syncResponseData.newTransactions);
+      matchedTransactions.push(...syncResponseData.matchedTransactions);
+      updatedAccounts.push(...syncResponseData.updatedAccounts);
     }
   }
 
@@ -1131,6 +1221,11 @@ async function unlinkAccount({ id }: { id: AccountEntity['id'] }) {
     account_sync_source: null,
   });
 
+  if (accRow.account_sync_source === 't212') {
+    //we also need to clear the T212 secret!
+    await deleteSecret(id);
+  }
+
   if (isGoCardless === false) {
     return;
   }
@@ -1182,6 +1277,65 @@ async function unlinkAccount({ id }: { id: AccountEntity['id'] }) {
   return 'ok';
 }
 
+async function linkT212Account({
+  requisitionId: apiKey,
+  account,
+  upgradingId,
+}: {
+  requisitionId: string;
+  account: { account_id: string; name: string };
+  upgradingId?: AccountEntity['id'];
+}) {
+  let id;
+
+  const bank = await link.findOrCreateBank(
+    { name: 'Trading 212' },
+    '292a39aa-e6bf-4d4f-8dcc-398335aea696',
+  );
+
+  if (upgradingId) {
+    id = upgradingId;
+    await db.update('accounts', {
+      id,
+      account_id: account.account_id,
+      account_sync_source: 't212',
+      bank: bank.id,
+    });
+  } else {
+    id = uuidv4();
+    await db.insertWithUUID('accounts', {
+      id,
+      account_id: account.account_id,
+      name: account.name,
+      official_name: 'integration-TRADING_212',
+      offbudget: 1,
+      account_sync_source: 't212',
+      bank: bank.id,
+    });
+    await db.insertPayee({
+      name: '',
+      transfer_acct: id,
+    });
+  }
+
+  await setSecret({ name: id, value: apiKey });
+
+  await bankSync.syncAccount(
+    undefined,
+    undefined,
+    id,
+    account.account_id,
+    undefined,
+  );
+
+  connection.send('sync-event', {
+    type: 'success',
+    tables: ['transactions'],
+  });
+
+  return 'ok';
+}
+
 export const app = createApp<AccountHandlers>();
 
 app.method('account-update', mutator(undoable(updateAccount)));
@@ -1210,3 +1364,5 @@ app.method('accounts-bank-sync', accountsBankSync);
 app.method('simplefin-batch-sync', simpleFinBatchSync);
 app.method('transactions-import', mutator(undoable(importTransactions)));
 app.method('account-unlink', mutator(unlinkAccount));
+app.method('get-t212-balance', bankSync.getT212Balance);
+app.method('t212-accounts-link', linkT212Account);

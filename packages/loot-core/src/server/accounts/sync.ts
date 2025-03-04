@@ -889,6 +889,11 @@ async function processBankSyncDownload(
         true,
         useStrictIdChecking,
       );
+
+      if (download.accountBalance) {
+        await updateAccountBalance(id, download.accountBalance);
+      }
+
       return {
         ...result,
         added: [initialId, ...result.added],
@@ -948,6 +953,9 @@ export async function syncAccount(
       syncStartDate,
       newAccount,
     );
+  } else if (acctRow.account_sync_source === 't212') {
+    const balance = await getT212Balance({ accountId: id });
+    download = await createInvestmentAdjustmentTransaction(acctRow.id, balance);
   } else {
     throw new Error(
       `Unrecognized bank-sync provider: ${acctRow.account_sync_source}`,
@@ -1000,4 +1008,103 @@ export async function simpleFinBatchSync(
   }
 
   return await Promise.all(promises);
+}
+
+export async function getT212Balance({
+  apiKey,
+  accountId,
+}: {
+  apiKey?: string;
+  accountId?: string;
+}) {
+  const data = {};
+  const headers = {
+    'X-ACTUAL-TOKEN': await asyncStorage.getItem('user-token'),
+  };
+
+  if (apiKey) {
+    headers['Authorization'] = apiKey;
+  } else {
+    data['id'] = accountId;
+  }
+
+  try {
+    const json = await post(
+      getServer().EXTERNAL_SERVER + '/t212-balance',
+      data,
+      headers,
+    );
+
+    return json.total;
+  } catch (error) {
+    console.error(error);
+    return error.message;
+  }
+}
+
+async function createInvestmentAdjustmentTransaction(
+  accountId: string,
+  balance: number,
+) {
+  const currTotal = await db.first<{ Balance: number }>(
+    'SELECT SUM(amount) / 100 AS Balance FROM transactions WHERE acct = ? AND tombstone = 0',
+    [accountId],
+  );
+
+  //only add a new transaction if the balance has changed
+  const transactions =
+    balance - currTotal.Balance !== 0
+      ? [
+          {
+            amount: balance - currTotal.Balance,
+            date: new Date(),
+            payeeName: 'Market Prices',
+            cleared: true,
+          },
+        ]
+      : [];
+
+  return {
+    transactions,
+  };
+}
+
+export async function syncInvestments(
+  accountId: string,
+  investments: (
+    | { type: 'cash'; value: number }
+    | {
+        type: 'crypto' | 'investment';
+        tickers: { ticker: string; quantity: number }[];
+      }
+  )[],
+) {
+  const promises = investments.map(investment => {
+    if (investment.type === 'cash') {
+      return investment.value;
+    }
+
+    return asyncStorage
+      .getItem('user-token')
+      .then(token =>
+        post(
+          getServer().EXTERNAL_SERVER + '/' + investment.type,
+          investment.tickers,
+          {
+            'X-ACTUAL-TOKEN': token,
+          },
+        ),
+      )
+      .then(json => Object.keys(json).reduce((acc, key) => acc + json[key], 0));
+  });
+
+  const results = await Promise.all(promises);
+  const balance = results.reduce((acc, val) => acc + val, 0);
+
+  const acctRow = await db.select('accounts', accountId);
+  const download = await createInvestmentAdjustmentTransaction(
+    accountId,
+    balance,
+  );
+  return processBankSyncDownload(download, accountId, acctRow, false); //investments are tracked via notes on an account, therefore cannot be new!
 }

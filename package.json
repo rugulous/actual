@@ -84,5 +84,9 @@
   "browserslist": [
     "electron 24.0",
     "defaults"
-  ]
+  ],
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "yahoo-finance2": "2.13.3"
+  }
 }

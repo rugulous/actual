@@ -77,13 +77,15 @@ app.post("/investment", async (req, res) => {
     for(let i = 0; i < stocks.length; i++){
         let value = (stocks[i].regularMarketPrice * 100) * req.body[i].quantity;
 
-        if(stocks[i].currency != "GBP"){
+        if(stocks[i].currency.toUpperCase() != "GBP"){
             if(!rates.hasOwnProperty(stocks[i].currency)){
                 const quote = await yahooFinance.quote(`GBP${stocks[i].currency}=X`);
                 rates[stocks[i].currency] = quote.regularMarketPrice;
             }
 
             value /= rates[stocks[i].currency];
+        } else {
+            value /= 100; //prices are returned in pence but we expect £ at this point
         }
 
         retVal[stocks[i].symbol] = Math.round(value) / 100;

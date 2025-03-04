@@ -889,6 +889,11 @@ async function processBankSyncDownload(
         true,
         useStrictIdChecking,
       );
+
+      if (download.accountBalance) {
+        await updateAccountBalance(id, download.accountBalance);
+      }
+
       return {
         ...result,
         added: [initialId, ...result.added],
@@ -948,6 +953,29 @@ export async function syncAccount(
       syncStartDate,
       newAccount,
     );
+  } else if (acctRow.account_sync_source === 't212') {
+    const currTotal = await db.first(
+      'SELECT SUM(amount) / 100 AS Balance FROM transactions WHERE acct = ? AND tombstone = 0',
+      [acctRow.id],
+    );
+    const balance = await getT212Balance({ accountId: id });
+
+    //only add a new transaction if the balance has changed
+    const transactions =
+      balance - currTotal.Balance !== 0
+        ? [
+            {
+              amount: balance - currTotal.Balance,
+              date: new Date(),
+              payeeName: 'Market Prices',
+              cleared: true,
+            },
+          ]
+        : [];
+
+    download = {
+      transactions,
+    };
   } else {
     throw new Error(
       `Unrecognized bank-sync provider: ${acctRow.account_sync_source}`,
@@ -1000,4 +1028,36 @@ export async function simpleFinBatchSync(
   }
 
   return await Promise.all(promises);
+}
+
+export async function getT212Balance({
+  apiKey,
+  accountId,
+}: {
+  apiKey?: string;
+  accountId?: string;
+}) {
+  const data = {};
+  const headers = {
+    'X-ACTUAL-TOKEN': await asyncStorage.getItem('user-token'),
+  };
+
+  if (apiKey) {
+    headers['Authorization'] = apiKey;
+  } else {
+    data['id'] = accountId;
+  }
+
+  try {
+    const json = await post(
+      getServer().EXTERNAL_SERVER + '/t212-balance',
+      data,
+      headers,
+    );
+
+    return json.total;
+  } catch (error) {
+    console.error(error);
+    return error.message;
+  }
 }

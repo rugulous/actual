@@ -306,6 +306,7 @@ type FinanceModals = {
     onAddCategoryGroup: () => void;
     onToggleHiddenCategories: () => void;
     onSwitchBudgetFile: () => void;
+    onTogglePrivacyMode: () => void;
   };
   'envelope-budget-month-menu': {
     month: string;
@@ -351,6 +352,7 @@ type FinanceModals = {
   'keyboard-shortcuts': EmptyObject;
   'goal-templates': EmptyObject;
   'category-automations-edit': EmptyObject;
+  'link-trading-212': EmptyObject;
 };
 
 export type PushModalAction = {

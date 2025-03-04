@@ -14,6 +14,7 @@ import * as pluggai from './app-pluggyai/app-pluggyai.js';
 import * as secretApp from './app-secrets.js';
 import * as simpleFinApp from './app-simplefin/app-simplefin.js';
 import * as syncApp from './app-sync.js';
+import * as externalApp from "./app-external.js";
 import { config } from './load-config.js';
 
 const app = express();
@@ -58,6 +59,7 @@ app.use('/gocardless', goCardlessApp.handlers);
 app.use('/simplefin', simpleFinApp.handlers);
 app.use('/pluggyai', pluggai.handlers);
 app.use('/secret', secretApp.handlers);
+app.use('/external', externalApp.handlers);
 
 app.use('/admin', adminApp.handlers);
 app.use('/openid', openidApp.handlers);

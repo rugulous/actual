@@ -62,7 +62,7 @@ export type AccountHandlers = {
 };
 
 const investmentRegex =
-  /#(\bcrypto\b|\binvestment\b)\s*\{([\s\S]*?)\}|#\bcash\b (\d*\.?\d*)/gm;
+  /#(\bcrypto\b|\binvestment\b|\bgilt\b)\s*\{([\s\S]*?)\}|#\bcash\b (\d*\.?\d*)/gm;
 
 async function updateAccount({ id, name }: Pick<AccountEntity, 'id' | 'name'>) {
   await db.update('accounts', { id, name });

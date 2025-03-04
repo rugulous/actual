@@ -5,6 +5,7 @@ import {
   } from './util/middlewares.js';
 import { secretsService } from './services/secrets-service.js';
 import yahooFinance from 'yahoo-finance2';
+import * as cheerio from 'cheerio';
 
 const app = express();
 app.use(requestLoggerMiddleware);
@@ -87,6 +88,32 @@ app.post("/investment", async (req, res) => {
 
         retVal[stocks[i].symbol] = Math.round(value) / 100;
     }
+    
+    res.send({
+        status: 'ok',
+        data: retVal
+    });
+});
+
+app.post("/gilt", async (req, res) => {
+    //gilt prices don't seem to be available through Yahoo (or really many other places)
+    //instead, it looks like we need to scrape HL for up to date prices!
+    const rawContent = await fetch("https://www.hl.co.uk/shares/corporate-bonds-gilts/bond-prices/uk-gilts").then(res => res.text());
+
+    const $ = cheerio.load(rawContent);
+    const rows = $('table tbody tr td:first-child span');
+    const retVal = {};
+
+    rows.each((i, _el) => {
+        const el = $(_el);
+        const id = el.text().split("|")[1].trim();
+        const match = req.body.find(x => x.ticker === id);
+
+        if(match){
+            const price = parseFloat($(el.parent().siblings("td")[2]).text());
+            retVal[match.ticker] = Math.round(match.quantity * price) / 100;
+        }
+    });
     
     res.send({
         status: 'ok',

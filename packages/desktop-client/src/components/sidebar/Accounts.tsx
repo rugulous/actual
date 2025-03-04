@@ -117,7 +117,7 @@ export function Accounts() {
             key={account.id}
             name={account.name}
             account={account}
-            connected={!!account.bank}
+            connected={account.can_sync}
             pending={syncingAccountIds.includes(account.id)}
             failed={failedAccounts.has(account.id)}
             updated={updatedAccounts.includes(account.id)}
@@ -148,7 +148,7 @@ export function Accounts() {
             key={account.id}
             name={account.name}
             account={account}
-            connected={!!account.bank}
+            connected={account.can_sync}
             pending={syncingAccountIds.includes(account.id)}
             failed={failedAccounts.has(account.id)}
             updated={updatedAccounts.includes(account.id)}

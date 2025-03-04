@@ -271,7 +271,7 @@ function AccountList({
               account={acct}
               key={acct.id}
               updated={updatedAccounts && updatedAccounts.includes(acct.id)}
-              connected={!!acct.bank}
+              connected={acct.can_sync}
               pending={syncingAccountIds.includes(acct.id)}
               failed={failedAccounts && failedAccounts.has(acct.id)}
               getBalanceQuery={getBalanceQuery}
@@ -292,7 +292,7 @@ function AccountList({
               account={acct}
               key={acct.id}
               updated={updatedAccounts && updatedAccounts.includes(acct.id)}
-              connected={!!acct.bank}
+              connected={acct.can_sync}
               pending={syncingAccountIds.includes(acct.id)}
               failed={failedAccounts && failedAccounts.has(acct.id)}
               getBalanceQuery={getBalanceQuery}

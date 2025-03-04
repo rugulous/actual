@@ -4,7 +4,6 @@ import bodyParser from 'body-parser';
 import cors from 'cors';
 import express from 'express';
 import actuator from 'express-actuator';
-import rateLimit from 'express-rate-limit';
 
 import * as accountApp from './app-account.js';
 import * as adminApp from './app-admin.js';
@@ -26,16 +25,6 @@ process.on('unhandledRejection', reason => {
 app.disable('x-powered-by');
 app.use(cors());
 app.set('trust proxy', config.get('trustedProxies'));
-if (process.env.NODE_ENV !== 'development') {
-  app.use(
-    rateLimit({
-      windowMs: 60 * 1000,
-      max: 500,
-      legacyHeaders: false,
-      standardHeaders: true,
-    }),
-  );
-}
 
 app.use(
   bodyParser.json({ limit: `${config.get('upload.fileSizeLimitMB')}mb` }),

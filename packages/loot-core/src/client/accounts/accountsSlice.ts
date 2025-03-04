@@ -244,7 +244,8 @@ export const syncAccounts = createAppAsyncThunk(
       ? [id]
       : queriesState.accounts
           .filter(
-            ({ bank, closed, tombstone }) => !!bank && !closed && !tombstone,
+            ({ can_sync, closed, tombstone }) =>
+              can_sync && !closed && !tombstone,
           )
           .sort((a, b) =>
             a.offbudget === b.offbudget

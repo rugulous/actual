@@ -5,16 +5,17 @@ import { PostError } from './errors';
 import * as Platform from './platform';
 
 function throwIfNot200(res: Response, text: string) {
-  //allow for 200 (OK) and 204 (No Content), along with any other general success messages
-  if (Math.floor(res.status / 10) === 20) {
+  //there are a few places where we return 204 (success, but no content)
+  //these should probably also not throw (along with other 2xx codes)
+  if (Math.floor(res.status / 100) === 2) {
     return;
   }
 
   if (res.status === 500) {
-    throw new PostError(res.status === 500 ? 'internal' : text);
+    throw new PostError('internal');
   }
 
-  const contentType = res.headers.get('Content-Type');
+  const contentType = res.headers.get('Content-Type') ?? '';
   if (contentType.toLowerCase().indexOf('application/json') !== -1) {
     const json = JSON.parse(text);
     throw new PostError(json.reason);

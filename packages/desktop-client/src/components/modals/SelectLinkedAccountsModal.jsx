@@ -9,6 +9,7 @@ import {
   linkAccount,
   linkAccountPluggyAi,
   linkAccountSimpleFin,
+  linkAccountT212,
   unlinkAccount,
 } from 'loot-core/client/accounts/accountsSlice';
 import { closeModal } from 'loot-core/client/actions';
@@ -90,6 +91,15 @@ export function SelectLinkedAccountsModal({
           dispatch(
             linkAccountSimpleFin({
               externalAccount,
+              upgradingId,
+              offBudget,
+            }),
+          );
+        } else if (syncSource === 't212') {
+          dispatch(
+            linkAccountT212({
+              requisitionId,
+              account: externalAccount,
               upgradingId,
               offBudget,
             }),
@@ -231,12 +241,26 @@ function TableRow({
   const { addOnBudgetAccountOption, addOffBudgetAccountOption } =
     useAddBudgetAccountOptions();
 
-  const availableAccountOptions = [
-    ...unlinkedAccounts,
+  let accounts = externalAccount.offbudget
+    ? unlinkedAccounts.filter(acc => acc.offbudget === 1)
+    : unlinkedAccounts;
+
+  let availableAccountOptions = [
+    ...accounts,
     chosenAccount?.id !== addOnBudgetAccountOption.id && chosenAccount,
-    addOnBudgetAccountOption,
     addOffBudgetAccountOption,
-  ].filter(Boolean);
+  ];
+
+  //special case - investment accounts should not be part of a budget, so we will not give users that option!
+  if (!externalAccount.offbudget) {
+    availableAccountOptions.splice(
+      availableAccountOptions.length - 2,
+      0,
+      addOnBudgetAccountOption,
+    );
+  }
+
+  availableAccountOptions = availableAccountOptions.filter(Boolean);
 
   return (
     <Row style={{ backgroundColor: theme.tableBackground }}>

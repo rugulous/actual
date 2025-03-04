@@ -150,6 +150,15 @@ export const linkAccountPluggyAi = createAppAsyncThunk(
     });
     dispatch(getPayees());
     dispatch(getAccounts());
+  
+export const linkAccountT212 = createAppAsyncThunk(
+  `${sliceName}/linkAccountT212`,
+  async (params: {
+    requisitionId: string;
+    account: { account_id: string; name: string };
+    upgradingId?: AccountEntity['id'];
+  }) => {
+    await send('t212-accounts-link', params);
   },
 );
 

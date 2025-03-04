@@ -10,8 +10,6 @@ import { css } from '@emotion/css';
 
 import { usePrivacyMode } from '../hooks/usePrivacyMode';
 
-import { useResponsive } from './responsive/ResponsiveProvider';
-
 type ConditionalPrivacyFilterProps = {
   children: ReactNode;
   privacyFilter?: boolean | PrivacyFilterProps;
@@ -51,11 +49,8 @@ export function PrivacyFilter({
   ...props
 }: PrivacyFilterProps) {
   const privacyMode = usePrivacyMode();
-  // Limit mobile support for now.
-  const { isNarrowWidth } = useResponsive();
   const activate =
     privacyMode &&
-    !isNarrowWidth &&
     (!activationFilters ||
       activationFilters.every(value =>
         typeof value === 'boolean' ? value : value(),

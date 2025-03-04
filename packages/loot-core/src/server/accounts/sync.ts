@@ -1014,7 +1014,7 @@ async function createInvestmentAdjustmentTransaction(
 
 export async function syncInvestments(
   accountId: string,
-  investmentTypes: (
+  investments: (
     | { type: 'cash'; value: number }
     | {
         type: 'crypto' | 'investment';
@@ -1022,26 +1022,27 @@ export async function syncInvestments(
       }
   )[],
 ) {
-  let balance = 0;
-
-  for (const investment of investmentTypes) {
+  const promises = investments.map(investment => {
     if (investment.type === 'cash') {
-      balance += investment.value;
-      continue;
+      return investment.value;
     }
 
-    const json = await post(
-      getServer().EXTERNAL_SERVER + '/' + investment.type,
-      investment.tickers,
-      {
-        'X-ACTUAL-TOKEN': await asyncStorage.getItem('user-token'),
-      },
-    );
+    return asyncStorage
+      .getItem('user-token')
+      .then(token =>
+        post(
+          getServer().EXTERNAL_SERVER + '/' + investment.type,
+          investment.tickers,
+          {
+            'X-ACTUAL-TOKEN': token,
+          },
+        ),
+      )
+      .then(json => Object.keys(json).reduce((acc, key) => acc + json[key], 0));
+  });
 
-    for (const key of Object.keys(json)) {
-      balance += json[key];
-    }
-  }
+  const results = await Promise.all(promises);
+  const balance = results.reduce((acc, val) => acc + val, 0);
 
   const acctRow = await db.select('accounts', accountId);
   const download = await createInvestmentAdjustmentTransaction(

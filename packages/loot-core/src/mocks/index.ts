@@ -42,6 +42,7 @@ export function generateAccount(
       balance_limit: 0,
       account_sync_source: 'goCardless',
       last_sync: new Date().getTime().toString(),
+      can_sync: false,
     };
   }
 
@@ -61,6 +62,7 @@ function emptySyncFields(): _SyncFields<false> {
     balance_limit: null,
     account_sync_source: null,
     last_sync: null,
+    can_sync: false,
   };
 }
 

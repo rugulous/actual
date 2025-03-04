@@ -19,13 +19,13 @@ import { Popover } from '@actual-app/components/popover';
 import { styles } from '@actual-app/components/styles';
 import { Text } from '@actual-app/components/text';
 import { View } from '@actual-app/components/view';
-import { t } from 'i18next';
 
 import { setNotificationInset } from 'loot-core/client/actions';
 import { validForTransfer } from 'loot-core/client/transfer';
 import * as monthUtils from 'loot-core/shared/months';
 import { isPreviewId } from 'loot-core/shared/transactions';
 import { groupById, integerToCurrency } from 'loot-core/shared/util';
+import { AccountEntity } from 'loot-core/types/models';
 import { type TransactionEntity } from 'loot-core/types/models/transaction';
 
 import { useAccounts } from '../../../hooks/useAccounts';
@@ -78,7 +78,7 @@ type TransactionListProps = {
   onOpenTransaction?: (transaction: TransactionEntity) => void;
   isLoadingMore: boolean;
   onLoadMore: () => void;
-  showMakeTransfer: boolean;
+  account: AccountEntity;
 };
 
 export function TransactionList({
@@ -87,7 +87,7 @@ export function TransactionList({
   onOpenTransaction,
   isLoadingMore,
   onLoadMore,
-  showMakeTransfer,
+  account,
 }: TransactionListProps) {
   const { t } = useTranslation();
   const sections = useMemo(() => {
@@ -215,7 +215,7 @@ export function TransactionList({
       {selectedTransactions.size > 0 && (
         <SelectedTransactionsFloatingActionBar
           transactions={transactions}
-          showMakeTransfer={showMakeTransfer}
+          showMakeTransfer={!account}
         />
       )}
     </>
@@ -233,6 +233,7 @@ function SelectedTransactionsFloatingActionBar({
   style = {},
   showMakeTransfer,
 }: SelectedTransactionsFloatingActionBarProps) {
+  const { t } = useTranslation();
   const editMenuTriggerRef = useRef(null);
   const [isEditMenuOpen, setIsEditMenuOpen] = useState(false);
   const moreOptionsMenuTriggerRef = useRef(null);
@@ -328,32 +329,23 @@ function SelectedTransactionsFloatingActionBar({
       name: 'duplicate',
       text: t('Duplicate'),
     },
+    {
+      name: allTransactionsAreLinked ? 'unlink-schedule' : 'link-schedule',
+      text: t((allTransactionsAreLinked ? 'Unlink' : 'Link') + ' schedule'),
+    },
+    {
+      name: 'delete',
+      text: t('Delete'),
+    },
   ];
 
-  if (allTransactionsAreLinked) {
-    moreOptionsMenuItems.push({
-      name: 'unlink-schedule',
-      text: t('Unlink schedule'),
-    });
-  } else {
-    moreOptionsMenuItems.push({
-      name: 'link-schedule',
-      text: t('Link schedule'),
-    });
-  }
-
   if (showMakeTransfer) {
-    moreOptionsMenuItems.push({
+    moreOptionsMenuItems.splice(2, 0, {
       name: 'transfer',
       text: t('Make transfer'),
       disabled: !canBeTransfer,
     });
   }
-
-  moreOptionsMenuItems.push({
-    name: 'delete',
-    text: t('Delete'),
-  });
 
   return (
     <FloatingActionBar style={style}>

@@ -7,6 +7,7 @@ import { View } from '@actual-app/components/view';
 
 import {
   linkAccount,
+  linkAccountPluggyAi,
   linkAccountSimpleFin,
   linkAccountT212,
   unlinkAccount,
@@ -100,6 +101,18 @@ export function SelectLinkedAccountsModal({
               requisitionId,
               account: externalAccount,
               upgradingId,
+              offBudget,
+            }),
+          );
+        } else if (syncSource === 'pluggyai') {
+          dispatch(
+            linkAccountPluggyAi({
+              externalAccount,
+              upgradingId:
+                chosenLocalAccountId !== addOnBudgetAccountOption.id &&
+                chosenLocalAccountId !== addOffBudgetAccountOption.id
+                  ? chosenLocalAccountId
+                  : undefined,
               offBudget,
             }),
           );

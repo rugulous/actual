@@ -7,6 +7,7 @@ import {
   type AccountEntity,
   type TransactionEntity,
   type SyncServerSimpleFinAccount,
+  type SyncServerPluggyAiAccount,
 } from '../../types/models';
 import { addNotification } from '../actions';
 import {
@@ -130,6 +131,26 @@ export const linkAccountSimpleFin = createAppAsyncThunk(
   },
 );
 
+type LinkAccountPluggyAiPayload = {
+  externalAccount: SyncServerPluggyAiAccount;
+  upgradingId?: AccountEntity['id'];
+  offBudget?: boolean;
+};
+
+export const linkAccountPluggyAi = createAppAsyncThunk(
+  `${sliceName}/linkAccountPluggyAi`,
+  async (
+    { externalAccount, upgradingId, offBudget }: LinkAccountPluggyAiPayload,
+    { dispatch },
+  ) => {
+    await send('pluggyai-accounts-link', {
+      externalAccount,
+      upgradingId,
+      offBudget,
+    });
+    dispatch(getPayees());
+    dispatch(getAccounts());
+  
 export const linkAccountT212 = createAppAsyncThunk(
   `${sliceName}/linkAccountT212`,
   async (params: {
@@ -326,6 +347,7 @@ export const actions = {
   ...accountsSlice.actions,
   linkAccount,
   linkAccountSimpleFin,
+  linkAccountPluggyAi,
   moveAccount,
   unlinkAccount,
   syncAccounts,

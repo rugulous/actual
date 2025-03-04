@@ -150,7 +150,9 @@ export const linkAccountPluggyAi = createAppAsyncThunk(
     });
     dispatch(getPayees());
     dispatch(getAccounts());
-  
+  },
+);
+
 export const linkAccountT212 = createAppAsyncThunk(
   `${sliceName}/linkAccountT212`,
   async (params: {

@@ -182,7 +182,7 @@ app.post("/car", async (req, res) => {
             EmailOptIn: "true",
             Mileage: mileage,
             MileageCheck: mileage,
-            Postcode: "RG279XA",
+            Postcode: process.env.ACTUAL_POSTCODE ?? "RG279XA",
             PreviousOwners: previousOwners,
             TelephoneNumber: "01234567890",
             VehicleDetailsSurvey: "5"

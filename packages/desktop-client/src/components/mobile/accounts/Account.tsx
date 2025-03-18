@@ -13,7 +13,7 @@ export function Account() {
 
   const { id: accountId } = useParams();
 
-  const account = useAccount(accountId!);
+  const account = useAccount(accountId);
 
   return (
     <AccountTransactions

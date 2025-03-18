@@ -145,7 +145,7 @@ function AccountCard({
         >
           {
             /* TODO: Should bankId be part of the AccountEntity type? */
-            'bankId' in account && account.bankId ? (
+            ('bankId' in account && account.bankId) || connected ? (
               <View
                 style={{
                   backgroundColor: pending
@@ -270,10 +270,10 @@ function AccountList({
             <AccountCard
               account={acct}
               key={acct.id}
-              updated={updatedAccounts && updatedAccounts.includes(acct.id)}
+              updated={updatedAccounts?.includes(acct.id)}
               connected={acct.can_sync}
               pending={syncingAccountIds.includes(acct.id)}
-              failed={failedAccounts && failedAccounts.has(acct.id)}
+              failed={failedAccounts?.has(acct.id)}
               getBalanceQuery={getBalanceQuery}
               onSelect={onSelectAccount}
             />
@@ -291,10 +291,10 @@ function AccountList({
             <AccountCard
               account={acct}
               key={acct.id}
-              updated={updatedAccounts && updatedAccounts.includes(acct.id)}
+              updated={updatedAccounts?.includes(acct.id)}
               connected={acct.can_sync}
               pending={syncingAccountIds.includes(acct.id)}
-              failed={failedAccounts && failedAccounts.has(acct.id)}
+              failed={failedAccounts?.has(acct.id)}
               getBalanceQuery={getBalanceQuery}
               onSelect={onSelectAccount}
             />

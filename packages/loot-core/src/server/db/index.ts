@@ -670,6 +670,7 @@ export function getAccounts() {
             OR n.note LIKE '%#crypto%' 
             OR n.note LIKE '%#gilt%' 
             OR n.note LIKE '%#investment%' 
+            OR n.note LIKE '%#car%'
               THEN 1 
               ELSE 0 
           END as can_sync

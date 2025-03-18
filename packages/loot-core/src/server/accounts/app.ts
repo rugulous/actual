@@ -67,7 +67,7 @@ export type AccountHandlers = {
 };
 
 const investmentRegex =
-  /#(\bcrypto\b|\binvestment\b|\bgilt\b)\s*\{([\s\S]*?)\}|#\bcash\b (\d*\.?\d*)/gm;
+  /#(\bcrypto\b|\binvestment\b|\bgilt\b)\s*\{([\s\S]*?)\}|#\bcash\b (\d*\.?\d*)|#\bcar\b (.*) ([\d]*)/gm;
 
 async function updateAccount({
   id,
@@ -956,17 +956,37 @@ async function accountsBankSync({
 
       try {
         console.group(
-          'Investment Valuation Sync operation for account:',
+          'Asset/Investment Valuation Sync operation for account:',
           acct.name,
         );
         const investmentTypes = matches.map(match => {
-          const type = (match[1] ?? 'cash') as 'cash' | 'crypto' | 'investment';
+          const type = (match[1] ?? (match[4] ? 'car' : 'cash')) as
+            | 'cash'
+            | 'crypto'
+            | 'investment'
+            | 'car';
           if (type === 'cash') {
             const value = parseFloat(match[3]);
             console.log(`Found cash value of ${value}`);
             return {
-              type,
+              type: 'cash',
               value,
+            } as {
+              type: 'cash';
+              value: number;
+            };
+          }
+
+          if (type === 'car') {
+            console.log(`Found car with reg ${match[4]}`);
+            return {
+              type: 'car',
+              reg: match[4],
+              mileage: parseInt(match[5]),
+            } as {
+              type: 'car';
+              reg: string;
+              mileage: number;
             };
           }
 

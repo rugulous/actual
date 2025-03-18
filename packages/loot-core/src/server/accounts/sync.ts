@@ -1073,6 +1073,7 @@ export async function syncInvestments(
   accountId: string,
   investments: (
     | { type: 'cash'; value: number }
+    | { type: 'car'; reg: string; mileage: number }
     | {
         type: 'crypto' | 'investment';
         tickers: { ticker: string; quantity: number }[];
@@ -1084,18 +1085,22 @@ export async function syncInvestments(
       return investment.value;
     }
 
+    const body =
+      investment.type === 'car'
+        ? { reg: investment.reg, mileage: investment.mileage }
+        : investment.tickers;
+
     return asyncStorage
       .getItem('user-token')
       .then(token =>
-        post(
-          getServer().EXTERNAL_SERVER + '/' + investment.type,
-          investment.tickers,
-          {
-            'X-ACTUAL-TOKEN': token,
-          },
-        ),
+        post(getServer().EXTERNAL_SERVER + '/' + investment.type, body, {
+          'X-ACTUAL-TOKEN': token,
+        }),
       )
-      .then(json => Object.keys(json).reduce((acc, key) => acc + json[key], 0));
+      .then(json => {
+        console.log(json);
+        return Object.keys(json).reduce((acc, key) => acc + json[key], 0);
+      });
   });
 
   const results = await Promise.all(promises);

@@ -122,3 +122,83 @@ app.post("/gilt", async (req, res) => {
         data: retVal
     });
 });
+
+app.post("/car", async (req, res) => {
+    const journeyName = "SeparateOptExtras";
+    const journeyVariant = "VDSurvey";
+
+    const config = await fetch("https://www.webuyanycar.com/settings.json").then(res => res.json());
+    const token = await fetch("https://api.webuyanycar.com/v2.1/authentication/", {
+        method: 'POST',
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            appSecret: config.carAppSecret,
+            authentication: "default",
+            entranceUrl: "https://www.webuyanycar.com",
+            userId: null
+        })
+    }).then(res => res.text());
+
+    const authHeader = `JWT ${token.replaceAll('"', "")}`;
+
+    const quote = await fetch("https://api.webuyanycar.com/v2.1/vehicles/", {
+        method: 'POST',
+        headers: {
+            Authorization: authHeader,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          journeyName,
+          journeyVariant,
+          mileage: req.body.mileage.toLocaleString(),
+          vrm: req.body.reg
+        })
+    }).then(res => res.json());
+
+    let previousOwners = "1";
+    for(const page of quote.journey.journeyPages){
+        for(const question of page.pageQuestions){
+            if(question.questionParameterName == "PreviousOwners"){
+                previousOwners = question.assumedValue;
+            }
+        }
+    }
+
+    const mileage = quote.latestMotMileage ?? req.body.mileage.toString();
+
+    const body = JSON.stringify({
+        damages: [],
+        journeyName,
+        journeyVariant,
+        quoteGuid: quote.quoteGuid,
+        quoteId: quote.quoteId,
+        save: true,
+        valuationParameterDictionary: {
+            CinchOptIn: "false",
+            CustomerName: "Website User",
+            EmailAddress: `mail@example.com`,
+            EmailOptIn: "true",
+            Mileage: mileage,
+            MileageCheck: mileage,
+            Postcode: "RG279XA",
+            PreviousOwners: previousOwners,
+            TelephoneNumber: "01234567890",
+            VehicleDetailsSurvey: "5"
+        }
+    });
+
+    const valuation = await fetch("https://api.webuyanycar.com/v2.1/Valuations/", {
+        method: 'POST',
+        headers:{
+            Authorization: authHeader,
+            "Content-Type": "application/json"
+        },
+        body
+    }).then(res => res.json());
+
+    res.send({
+        [req.body.reg]: valuation.vehiclePriceOffered
+    });
+});

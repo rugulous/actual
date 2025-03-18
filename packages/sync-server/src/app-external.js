@@ -199,6 +199,9 @@ app.post("/car", async (req, res) => {
     }).then(res => res.json());
 
     res.send({
-        [req.body.reg]: valuation.vehiclePriceOffered
+        status: 'ok',
+        data: {
+            [req.body.reg]: valuation.vehiclePriceOffered
+        }
     });
 });

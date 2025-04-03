@@ -224,11 +224,15 @@ function handleSyncResponse(
 
 type SyncAccountsPayload = {
   id?: AccountEntity['id'] | undefined;
+  includeInvestment?: boolean;
 };
 
 export const syncAccounts = createAppAsyncThunk(
   `${sliceName}/syncAccounts`,
-  async ({ id }: SyncAccountsPayload, { dispatch, getState }) => {
+  async (
+    { id, includeInvestment }: SyncAccountsPayload,
+    { dispatch, getState },
+  ) => {
     // Disallow two parallel sync operations
     const accountsState = getState().account;
     if (accountsState.accountsSyncing.length > 0) {
@@ -244,8 +248,18 @@ export const syncAccounts = createAppAsyncThunk(
       ? [id]
       : queriesState.accounts
           .filter(
-            ({ can_sync, closed, tombstone }) =>
-              can_sync && !closed && !tombstone,
+            ({
+              can_sync,
+              closed,
+              tombstone,
+              is_bank_account,
+              account_sync_source,
+            }) =>
+              can_sync &&
+              !closed &&
+              !tombstone &&
+              (includeInvestment ||
+                (is_bank_account && account_sync_source !== 't212')),
           )
           .sort((a, b) =>
             a.offbudget === b.offbudget
@@ -298,6 +312,7 @@ export const syncAccounts = createAppAsyncThunk(
       // Perform sync operation
       const res = await send('accounts-bank-sync', {
         ids: [accountId],
+        includeInvestment,
       });
 
       const success = handleSyncResponse(

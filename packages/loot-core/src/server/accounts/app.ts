@@ -897,8 +897,10 @@ export type SyncResponseWithErrors = SyncResponse & {
 
 async function accountsBankSync({
   ids = [],
+  includeInvestment = true,
 }: {
   ids: Array<AccountEntity['id']>;
+  includeInvestment?: boolean;
 }): Promise<SyncResponseWithErrors> {
   const [[, userId], [, userKey]] = await asyncStorage.multiGet([
     'user-id',
@@ -948,7 +950,7 @@ async function accountsBankSync({
       } finally {
         console.groupEnd();
       }
-    } else if (acct.note) {
+    } else if (acct.note && includeInvestment) {
       const matches = [...acct.note.matchAll(investmentRegex)];
       if (matches.length === 0) {
         continue;

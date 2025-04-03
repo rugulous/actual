@@ -26,6 +26,8 @@ import { type Binding, type SheetFields } from '../../spreadsheet';
 import { CellValue, CellValueText } from '../../spreadsheet/CellValue';
 import { MOBILE_NAV_HEIGHT } from '../MobileNavTabs';
 import { PullToRefresh } from '../PullToRefresh';
+import { Toggle } from '@actual-app/components/toggle';
+import { useLocalPref } from '../../../hooks/useLocalPref';
 
 type AccountHeaderProps<SheetFieldName extends SheetFields<'account'>> = {
   id: string;
@@ -233,6 +235,10 @@ function AccountList({
   const syncingAccountIds = useSelector(state => state.account.accountsSyncing);
   const onBudgetAccounts = accounts.filter(account => account.offbudget === 0);
   const offBudgetAccounts = accounts.filter(account => account.offbudget === 1);
+  const [syncInvestment, setSyncInvestments] = useLocalPref(
+    'sync.includeInvestment',
+    true,
+  );
 
   return (
     <Page
@@ -259,6 +265,15 @@ function AccountList({
       {accounts.length === 0 && <EmptyMessage />}
       <PullToRefresh onRefresh={onSync}>
         <View aria-label={t('Account list')} style={{ margin: 10 }}>
+          <label htmlFor="syncInvestment">
+            <Trans>Include Investment Accounts in Sync?</Trans>
+            <Toggle
+              id="syncInvestment"
+              isOn={syncInvestment}
+              onToggle={() => setSyncInvestments(!syncInvestment)}
+            />
+          </label>
+
           {onBudgetAccounts.length > 0 && (
             <AccountHeader
               id="onbudget"
@@ -312,6 +327,7 @@ export function Accounts() {
   const [_numberFormat] = useSyncedPref('numberFormat');
   const numberFormat = _numberFormat || 'comma-dot';
   const [hideFraction] = useSyncedPref('hideFraction');
+  const [includeInvestment] = useLocalPref('sync.includeInvestment');
 
   const navigate = useNavigate();
 
@@ -327,8 +343,8 @@ export function Accounts() {
   }, [dispatch]);
 
   const onSync = useCallback(async () => {
-    dispatch(syncAndDownload({}));
-  }, [dispatch]);
+    dispatch(syncAndDownload({ includeInvestment }));
+  }, [dispatch, includeInvestment]);
 
   return (
     <View style={{ flex: 1 }}>

@@ -1059,7 +1059,7 @@ async function createInvestmentAdjustmentTransaction(
             amount: balance - currTotal.Balance,
             date: new Date(),
             payeeName: 'Market Prices',
-            cleared: true,
+            booked: true,
           },
         ]
       : [];

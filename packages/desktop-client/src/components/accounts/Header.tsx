@@ -52,6 +52,7 @@ import { SelectedTransactionsButton } from '../transactions/SelectedTransactions
 import { type TableRef } from './Account';
 import { Balances } from './Balance';
 import { ReconcilingMessage, ReconcileMenu } from './Reconcile';
+import { Toggle } from '@actual-app/components/toggle';
 
 type AccountHeaderProps = {
   tableRef: TableRef;
@@ -200,6 +201,7 @@ export function AccountHeader({
   const isUsingServer = syncServerStatus !== 'no-server';
   const isServerOffline = syncServerStatus === 'offline';
   const [_, setExpandSplitsPref] = useLocalPref('expand-splits');
+  const [syncAll, setSyncAll] = useLocalPref('sync.includeInvestment', true);
 
   let canSync = false;
   if (isUsingServer) {
@@ -331,6 +333,23 @@ export function AccountHeader({
               />{' '}
               {isServerOffline ? t('Bank Sync Offline') : t('Bank Sync')}
             </Button>
+          )}
+
+          {canSync && !account && (
+            <View>
+              <label
+                htmlFor="syncAll"
+                style={{ display: 'flex', alignItems: 'center' }}
+              >
+                <Toggle
+                  id="syncAll"
+                  isOn={syncAll}
+                  style={{ marginRight: '.5rem' }}
+                  onToggle={() => setSyncAll(!syncAll)}
+                />
+                <Trans>Include Investment Accounts in Sync?</Trans>
+              </label>
+            </View>
           )}
 
           {account && !account.closed && (

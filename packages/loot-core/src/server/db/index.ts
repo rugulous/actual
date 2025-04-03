@@ -674,6 +674,7 @@ export function getAccounts() {
               THEN 1 
               ELSE 0 
           END as can_sync
+        , CASE WHEN a.account_id IS NOT NULL THEN 1 ELSE 0 END AS is_bank_account
        FROM accounts a
        LEFT JOIN banks b ON a.bank = b.id
        LEFT OUTER JOIN notes n ON n.ID = 'account-' || a.id

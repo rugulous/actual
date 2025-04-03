@@ -85,11 +85,15 @@ export const sync = createAppAsyncThunk(
 
 type SyncAndDownloadPayload = {
   accountId?: AccountEntity['id'] | string;
+  includeInvestment?: boolean;
 };
 
 export const syncAndDownload = createAppAsyncThunk(
   `${sliceName}/syncAndDownload`,
-  async ({ accountId }: SyncAndDownloadPayload, { dispatch }) => {
+  async (
+    { accountId, includeInvestment }: SyncAndDownloadPayload,
+    { dispatch },
+  ) => {
     // It is *critical* that we sync first because of transaction
     // reconciliation. We want to get all transactions that other
     // clients have already made, so that imported transactions can be
@@ -100,7 +104,9 @@ export const syncAndDownload = createAppAsyncThunk(
       return { error: syncState.error };
     }
 
-    const hasDownloaded = await dispatch(syncAccounts({ id: accountId }));
+    const hasDownloaded = await dispatch(
+      syncAccounts({ id: accountId, includeInvestment }),
+    );
 
     if (hasDownloaded) {
       // Sync again afterwards if new transactions were created

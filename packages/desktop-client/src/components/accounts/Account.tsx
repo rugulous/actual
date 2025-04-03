@@ -308,6 +308,7 @@ type AccountInternalProps = {
   accountsSyncing: string[];
   dispatch: AppDispatch;
   onSetTransfer: ReturnType<typeof useTransactionBatchActions>['onSetTransfer'];
+  includeInvestment: boolean;
 };
 type AccountInternalState = {
   search: string;
@@ -634,7 +635,10 @@ class AccountInternal extends PureComponent<
     const account = this.props.accounts.find(acct => acct.id === accountId);
 
     await this.props.dispatch(
-      syncAndDownload({ accountId: account ? account.id : undefined }),
+      syncAndDownload({
+        accountId: account ? account.id : undefined,
+        includeInvestment: this.props.includeInvestment,
+      }),
     );
   };
 
@@ -1944,6 +1948,7 @@ export function Account() {
   const dateFormat = useDateFormat() || 'MM/dd/yyyy';
   const [hideFraction] = useSyncedPref('hideFraction');
   const [expandSplits] = useLocalPref('expand-splits');
+  const [includeInvestment] = useLocalPref('sync.includeInvestment');
   const [showBalances, setShowBalances] = useSyncedPref(
     `show-balances-${params.id}`,
   );
@@ -2001,6 +2006,7 @@ export function Account() {
           categoryId={location?.state?.categoryId}
           location={location}
           savedFilters={savedFiters}
+          includeInvestment={includeInvestment}
         />
       </SplitsExpandedProvider>
     </SchedulesProvider>

@@ -315,24 +315,36 @@ export const goCardlessService = {
     const institution = await goCardlessService.getInstitution(institutionId);
 
     let response;
-    try {
-      response = await client.initSession({
-        redirectUrl: host + '/gocardless/link',
-        institutionId,
-        referenceId: uuidv4(),
-        accessValidForDays: institution.max_access_valid_for_days,
-        maxHistoricalDays: BANKS_WITH_LIMITED_HISTORY.includes(institutionId)
-          ? Number(institution.transaction_total_days) >= 90
-            ? '89'
-            : institution.transaction_total_days
-          : institution.transaction_total_days,
+    const body = {
+      redirectUrl: host + '/gocardless/link',
+      institutionId,
+      referenceId: uuidv4(),
+      accessValidForDays: institution.max_access_valid_for_days,
+      maxHistoricalDays: BANKS_WITH_LIMITED_HISTORY.includes(institutionId)
+        ? Number(institution.transaction_total_days) >= 90
+          ? '89'
+          : institution.transaction_total_days
+        : institution.transaction_total_days,
         userLanguage: 'en',
-        ssn: null,
-        redirectImmediate: false,
-        accountSelection: false,
-      });
-    } catch (error) {
-      handleGoCardlessError(error);
+      ssn: null,
+      redirectImmediate: false,
+      accountSelection,
+    };
+    try {
+      response = await client.initSession(body);
+    } catch {
+      try {
+        console.log('Failed to link using:');
+        console.log(body);
+        console.log('Falling back to accessValidForDays = 90');
+
+        response = await client.initSession({
+          ...body,
+          accessValidForDays: 90,
+        });
+      } catch (error) {
+        handleGoCardlessError(error);
+      }
     }
 
     const { link, id: requisitionId } = response;

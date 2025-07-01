@@ -328,7 +328,7 @@ export const goCardlessService = {
         userLanguage: 'en',
       ssn: null,
       redirectImmediate: false,
-      accountSelection,
+      accountSelection: false
     };
     try {
       response = await client.initSession(body);
